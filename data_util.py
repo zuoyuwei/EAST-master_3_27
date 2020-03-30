@@ -36,6 +36,7 @@ class GeneratorEnqueuer():
         self._stop_event = None
         self.queue = None
         self.random_seed = random_seed
+        self.lock = threading.Lock()
 
     def start(self, workers=1, max_queue_size=10):
         """Kicks off threads which add data from the generator into the queue.
@@ -50,8 +51,9 @@ class GeneratorEnqueuer():
             while not self._stop_event.is_set():
                 try:
                     if self._use_multiprocessing or self.queue.qsize() < max_queue_size:
-                        generator_output = next(self._generator)
-                        self.queue.put(generator_output)
+                        with self.lock:
+                            generator_output = next(self._generator)
+                            self.queue.put(generator_output)
                     else:
                         time.sleep(self.wait_time)
                 except Exception:

@@ -51,7 +51,7 @@ def load_annoataion(p):
     text_tags = []
     if not os.path.exists(p):
         return np.array(text_polys, dtype=np.float32)
-    with open(p, 'r') as f:
+    with open(p, 'r', encoding='utf-8') as f:
         reader = csv.reader(f)
         for line in reader:
             label = line[-1]
@@ -726,7 +726,7 @@ def generator(input_size=512, batch_size=1,
 
 def get_batch(num_workers, **kwargs):
     try:
-        enqueuer = GeneratorEnqueuer(generator(**kwargs), use_multiprocessing=True)
+        enqueuer = GeneratorEnqueuer(generator(**kwargs), use_multiprocessing=False)
         print('Generator use 10 batches for buffering, this may take a while, you can tune this yourself.')
         enqueuer.start(max_queue_size=10, workers=num_workers)
         generator_output = None
@@ -740,15 +740,19 @@ def get_batch(num_workers, **kwargs):
             yield generator_output
             generator_output = None
     finally:
-        print('dssds')
         if enqueuer is not None:
             enqueuer.stop()
 
 
 
 if __name__ == '__main__':
-    data_generator = generator(input_size=321,batch_size=2)
-    for i in range(2):
-        data = next(data_generator)
+    # data_generator = generator(input_size=321,batch_size=2)
+    # for i in range(3):
+    #     data = next(data_generator)
+    #     print(data[1])
     # 在此主函数中无法运行该py文件所定义的函数？
     # generator()
+    data_generator = get_batch(num_workers=6, input_size=321, batch_size=1)
+    for i in range(2):
+        data = next(data_generator)
+        print(data[1])
