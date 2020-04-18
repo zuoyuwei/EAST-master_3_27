@@ -123,6 +123,7 @@ def crop_area(im, polys, tags, crop_background=False, max_tries=50):
     :return:
     '''
     h, w, _ = im.shape
+    # 1/10 padding from im
     pad_h = h//10
     pad_w = w//10
     h_array = np.zeros((h + pad_h*2), dtype=np.int32)
@@ -136,8 +137,8 @@ def crop_area(im, polys, tags, crop_background=False, max_tries=50):
         maxy = np.max(poly[:, 1])
         h_array[miny+pad_h:maxy+pad_h] = 1
     # ensure the cropped area not across a text
-    h_axis = np.where(h_array == 0)
-    print('h_axis', h_axis)
+    # h_axis = np.where(h_array == 0)
+    # print('h_axis', h_axis)
     h_axis = np.where(h_array == 0)[0]
     w_axis = np.where(w_array == 0)[0]
     if len(h_axis) == 0 or len(w_axis) == 0:
@@ -609,12 +610,14 @@ def generator(input_size=512, batch_size=1,
                     print('text file {} does not exists'.format(txt_fn))
                     continue
 
+                # read vertices and text information from txt file
                 text_polys, text_tags = load_annoataion(txt_fn)
 
+                # check if text exists or clockwise array, if not change it clockwise
                 text_polys, text_tags = check_and_validate_polys(text_polys, text_tags, (h, w))
                 # if text_polys.shape[0] == 0:
                 #     continue
-                # random scale this image
+                # random scale this image (data augmentation)
                 rd_scale = np.random.choice(random_scale)
                 im = cv2.resize(im, dsize=None, fx=rd_scale, fy=rd_scale)
                 text_polys *= rd_scale
@@ -635,6 +638,7 @@ def generator(input_size=512, batch_size=1,
                     score_map = np.zeros((input_size, input_size), dtype=np.uint8)
                     geo_map_channels = 5 if FLAGS.geometry == 'RBOX' else 8
                     geo_map = np.zeros((input_size, input_size, geo_map_channels), dtype=np.float32)
+                    # training mask default value set to 1
                     training_mask = np.ones((input_size, input_size), dtype=np.uint8)
                 else:
                     im, text_polys, text_tags = crop_area(im, text_polys, text_tags, crop_background=False)

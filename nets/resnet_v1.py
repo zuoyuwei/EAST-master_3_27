@@ -179,9 +179,9 @@ def resnet_v1(inputs,
       ValueError: If the target output_stride is not valid.
     """
     with tf.variable_scope(scope, 'resnet_v1', [inputs], reuse=reuse) as sc:
-        end_points_collection = sc.name + '_end_points'
+        end_points_collection = sc.name + '_end_points'     # resnet_v1_50_end_points
         with slim.arg_scope([slim.conv2d, bottleneck,
-                             resnet_utils.stack_blocks_dense],
+                             resnet_utils.stack_blocks_dense],      # resnet_utils.stack_blocks_dense and bottleneck
                             outputs_collections=end_points_collection): #指定一个列表名，输出会被添加到这个列表
             with slim.arg_scope([slim.batch_norm], is_training=is_training):
                 net = inputs
@@ -227,6 +227,29 @@ def resnet_v1(inputs,
 
 resnet_v1.default_image_size = 224
 
+def vgg16(inputs,
+          num_classes=None,
+          is_training=True,
+          global_pool=True,
+          output_stride=None,
+          spatial_squeeze=True,
+          reuse=None,
+          scope='vgg'):
+    # tf.variable_scope指定变量作用域，作为变量名的前缀
+    with tf.variable_scope(scope, 'vgg_16', [inputs], reuse=reuse) as sc:
+        end_point_collection = sc.name + '_end_points'
+        with slim.arg_scope([slim.conv2d, slim.max_pool2d], outputs_collections=end_point_collection):
+            with slim.arg_scope([slim.batch_norm], is_training=is_training):
+                net = slim.repeat(inputs, 2, slim.conv2d, 64, [3, 3], scope='conv1')
+                net = slim.max_pool2d(net, [2, 2], scope='pool1')
+                net = slim.repeat(net, 2, slim.conv2d, 128, [3, 3], scope='conv2')
+                net = slim.max_pool2d(net, [2, 2], scope='pool2')
+                net = slim.repeat(net, 2, slim.conv2d, 256, [3, 3], scope='conv3')
+                net = slim.max_pool2d(net, [2, 2], scope='pool3')
+                net = slim.repeat(net, 2, slim.conv2d, 512, [3, 3], scope='conv4')
+                net = slim.max_pool2d(net, [2, 2], scope='pool4')
+                net = slim.repeat(net, 2, slim.conv2d, 512, [3, 3], scope='conv5')
+                net = slim.max_pool2d(net, [2, 2], scope='pool5')
 
 def resnet_v1_50(inputs,
                  num_classes=None,
