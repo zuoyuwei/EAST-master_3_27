@@ -4,12 +4,12 @@ import tensorflow as tf
 from tensorflow.contrib import slim
 
 tf.app.flags.DEFINE_integer('input_size', 512, '')
-tf.app.flags.DEFINE_integer('batch_size_per_gpu', 2, '')
+tf.app.flags.DEFINE_integer('batch_size_per_gpu', 4, '')
 tf.app.flags.DEFINE_integer('num_readers', 12, '')
 tf.app.flags.DEFINE_float('learning_rate', 0.0001, '')
-tf.app.flags.DEFINE_integer('max_steps', 2200, '')
+tf.app.flags.DEFINE_integer('max_steps', 200, '')
 tf.app.flags.DEFINE_float('moving_average_decay', 0.997, '')
-tf.app.flags.DEFINE_string('gpu_list', '0,1', '')
+tf.app.flags.DEFINE_string('gpu_list', '0', '')
 tf.app.flags.DEFINE_string('checkpoint_path', './tmp/east_resnet_v1_50_rbox/', '')
 tf.app.flags.DEFINE_boolean('restore', False, 'whether to resotre from checkpoint')
 tf.app.flags.DEFINE_integer('save_checkpoint_steps', 100, '')
@@ -22,13 +22,14 @@ import icdar
 FLAGS = tf.app.flags.FLAGS
 
 gpus = list(range(len(FLAGS.gpu_list.split(','))))      # gpu_list中以逗号分开 gpus=[0]
-print(gpus)
 
 
 def tower_loss(images, score_maps, geo_maps, training_masks, reuse_variables=None):
     # Build inference graph
     with tf.variable_scope(tf.get_variable_scope(), reuse=reuse_variables):
-        f_score, f_geometry = model.model(images, is_training=True)
+        f_score, f_geometry, end_points = model.model(images, is_training=True)
+        print('f_score shape:', f_score.shape)
+        print(end_points)
 
     model_loss = model.loss(score_maps, f_score,
                             geo_maps, f_geometry,
@@ -38,6 +39,7 @@ def tower_loss(images, score_maps, geo_maps, training_masks, reuse_variables=Non
     # add summary
     if reuse_variables is None:
         tf.summary.image('input', images)
+        # print('image shape:', images.shape)
         tf.summary.image('score_map', score_maps)
         tf.summary.image('score_map_pred', f_score * 255)
         tf.summary.image('geo_map_0', geo_maps[:, :, :, 0:1])
@@ -107,13 +109,13 @@ def main(argv=None):
         with tf.device('/gpu:%d' % gpu_id):
             with tf.name_scope('model_%d' % gpu_id) as scope:
                 iis = input_images_split[i]
-                print('input image divide into two parts, the {} length is {}'.format(i, len(iis)))
+                print('input image divide into two parts, the {} shape is {}'.format(i, iis.shape))
                 isms = input_score_maps_split[i]
-                print('input score divide into two parts, the {} length is {}'.format(i, len(isms)))
+                print('input score divide into two parts, the {} shape is {}'.format(i, isms.shape))
                 igms = input_geo_maps_split[i]
-                print('input geo map divide into two parts, the {} length is {}'.format(i, len(igms)))
+                print('input geo map divide into two parts, the {} shape is {}'.format(i, igms.shape))
                 itms = input_training_masks_split[i]
-                print('input training mask divide into two parts, the {} length is {}'.format(i, len(itms)))
+                print('input training mask divide into two parts, the {} shape is {}'.format(i, itms.shape))
                 total_loss, model_loss = tower_loss(iis, isms, igms, itms, reuse_variables)
                 #tf.control_dependencies:该函数保证其辖域中的操作必须要在该函数所传递的参数中的操作完成后再进行
                 #tf.GraphKeys.UPDATE_OPS:一个tensorflow计算图内置的一个集合，其中会保存一些需要在训练之前完成的操作，并配合tf.control_denpendencies函数使用
@@ -159,12 +161,14 @@ def main(argv=None):
                                          batch_size=FLAGS.batch_size_per_gpu * len(gpus))
 
         start = time.time()
+        print('reuse_variable before sess run',reuse_variables)
         for step in range(FLAGS.max_steps):
             data = next(data_generator)
             ml, tl, _ = sess.run([model_loss, total_loss, train_op], feed_dict={input_images: data[0],
                                                                                 input_score_maps: data[2],
                                                                                 input_geo_maps: data[3],
                                                                                 input_training_masks: data[4]})
+
             if np.isnan(tl):
                 print('Loss diverged, stop training')
                 break

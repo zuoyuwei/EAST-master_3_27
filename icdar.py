@@ -10,6 +10,10 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as Patches
 from shapely.geometry import Polygon
 
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams['savefig.dpi'] = 300
+plt.rcParams['image.interpolation'] = 'nearest'
+
 import tensorflow as tf
 
 from data_util import GeneratorEnqueuer
@@ -587,7 +591,7 @@ def generate_rbox(im_size, polys, tags):
 def generator(input_size=512, batch_size=1,
               background_ratio=3./8,
               random_scale=np.array([0.5, 1, 2.0, 3.0]),
-              vis=False):
+              vis=True):
     image_list = np.array(get_images())
     print('{} training images in {}'.format(
         image_list.shape[0], FLAGS.training_data_path))
@@ -602,6 +606,7 @@ def generator(input_size=512, batch_size=1,
         for i in index:
             try:
                 im_fn = image_list[i]
+                print('currnent process image name:',im_fn)
                 im = cv2.imread(im_fn)
                 # print im_fn
                 h, w, _ = im.shape
@@ -666,7 +671,7 @@ def generator(input_size=512, batch_size=1,
                     score_map, geo_map, training_mask = generate_rbox((new_h, new_w), text_polys, text_tags)
 
                 if vis:
-                    fig, axs = plt.subplots(3, 2, figsize=(20, 30))
+                    fig, axs = plt.subplots(3, 2, figsize=(16, 10))
                     # axs[0].imshow(im[:, :, ::-1])
                     # axs[0].set_xticks([])
                     # axs[0].set_yticks([])
@@ -705,8 +710,9 @@ def generator(input_size=512, batch_size=1,
                     axs[2, 1].set_xticks([])
                     axs[2, 1].set_yticks([])
                     plt.tight_layout()
-                    plt.show()
-                    plt.close()
+                    # plt.savefig('1.png')
+                    # plt.show()
+                    # plt.close()
 
                 images.append(im[:, :, ::-1].astype(np.float32))
                 image_fns.append(im_fn)
@@ -756,7 +762,8 @@ if __name__ == '__main__':
     #     print(data[1])
     # 在此主函数中无法运行该py文件所定义的函数？
     # generator()
-    data_generator = get_batch(num_workers=6, input_size=321, batch_size=1)
-    for i in range(2):
+    data_generator = get_batch(num_workers=6, input_size=321, batch_size=6)
+    print(data_generator)
+    for i in range(5):
         data = next(data_generator)
-        print(data[1])
+        print(data[0][0].shape)

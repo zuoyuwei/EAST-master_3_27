@@ -38,7 +38,7 @@ def model(images, weight_decay=1e-5, is_training=True):
 
     with slim.arg_scope(resnet_v1.resnet_arg_scope(weight_decay=weight_decay)):
         logits, end_points = resnet_v1.resnet_v1_50(images, is_training=is_training, scope='resnet_v1_50')
-        print(end_points)
+        # print('end_points:',end_points)
 
     with tf.variable_scope('feature_fusion', values=[end_points.values]):
         batch_norm_params = {
@@ -80,7 +80,7 @@ def model(images, weight_decay=1e-5, is_training=True):
             angle_map = (slim.conv2d(g[3], 1, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) - 0.5) * np.pi/2 # angle is between [-45, 45]
             F_geometry = tf.concat([geo_map, angle_map], axis=-1)
 
-    return F_score, F_geometry
+    return F_score, F_geometry, end_points
 
 
 def dice_coefficient(y_true_cls, y_pred_cls,

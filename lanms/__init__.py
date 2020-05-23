@@ -3,6 +3,7 @@ import os
 import numpy as np
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+# BASE_DIR = 'E:/TextLocal/EAST-master/lanms'
 
 if subprocess.call(['make', '-C', BASE_DIR]) != 0:  # return value
     raise RuntimeError('Cannot compile lanms: {}'.format(BASE_DIR))
